@@ -79,6 +79,10 @@ void init_LEDs(void){
 					GPIO_MODER_MODER7_0);
 }
 
+void display_on_LEDs(uint8_t count){
+	GPIOB -> ODR &= ~(GPIOB -> ODR);
+	GPIOB-> ODR = count;
+}
 
 
 
