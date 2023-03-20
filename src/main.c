@@ -84,5 +84,15 @@ void display_on_LEDs(uint8_t count){
 	GPIOB-> ODR = count;
 }
 
+void init_switches(void){
 
+	RCC->AHBENR|= RCC_AHBENR_GPIOAEN;
+
+	GPIOA->MODER &= ~(GPIO_MODER_MODER1|
+					  GPIO_MODER_MODER2);
+
+	GPIOA->PUPDR |= (GPIO_PUPDR_PUPDR1_0|
+					 GPIO_PUPDR_PUPDR2_0);
+
+}
 
