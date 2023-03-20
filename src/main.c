@@ -1,3 +1,4 @@
+
 // Description----------------------------------------------------------------|
 /*
  *
@@ -29,26 +30,36 @@ void main(void)
 	init_LCD();		//used to initiate the LCD
 	init_LEDs();
 	init_switches();
-	display_on_LCD(0); //displays 0 on reset
+	init_external_interrupts(); //instantiates the interrupt 
 
 	while(1)
 	{
+		if((interrupt_count%2)!=0) //checks to see if interrupt count is odd for functioning
+			{
+			 if((GPIOA->IDR & GPIO_IDR_1)==0) //checks to see if button 1 is pressed
+			{
+				count++; //increments count variable. if count is 255 it automatically resets to 0 and starts again. Therefore there's no need for an if statement
+				display_on_LEDs(count); //Displays count value on LEDs
+				display_on_LCD(count); //Displays count value on LEDs
+				delay(80000);	//delay to negate switch bounce
 
-		 if((GPIOA->IDR & GPIO_IDR_1)==0) //checks to see if button 1 is pressed
-		{
-			count++; //increments count variable. if count is 255 it automatically resets to 0 and starts again. Therefore there's no need for an if statement
-			display_on_LEDs(count); //Displays count value on LEDs
-			display_on_LCD(count); //Displays count value on LEDs
-			delay(80000);	//delay to negate switch bounce
+			}
+
+			else if ((GPIOA->IDR & GPIO_IDR_2)==0){ //checks to see if button 2 is pressed
+				count--; //decrements count variable. if count is 0 it automatically resets to 255. Therefore there's no need for an if statement
+				display_on_LEDs(count);//Displays count value on LEDs
+				display_on_LCD(count); //Displays count value on LEDs
+				delay(80000); //delay to negate switch bounce
+				}
 
 		}
+		else //checks to see if interrupt count is even for 'off' state
+		{
+			lcd_command(CLEAR); //clears LCD
+			count=0;			//Resets the count
+			display_on_LEDs(count); //turns off LEDs
+		}
 
-		else if ((GPIOA->IDR & GPIO_IDR_2)==0){ //checks to see if button 2 is pressed
-			count--; //decrements count variable. if count is 0 it automatically resets to 255. Therefore there's no need for an if statement
-			display_on_LEDs(count);//Displays count value on LEDs
-			display_on_LCD(count); //Displays count value on LEDs
-			delay(80000); //delay to negate switch bounce
-			}
 
 	}
 	}
@@ -89,10 +100,30 @@ void init_switches(void){
 	RCC->AHBENR|= RCC_AHBENR_GPIOAEN;
 
 	GPIOA->MODER &= ~(GPIO_MODER_MODER1|
-					  GPIO_MODER_MODER2);
+					  GPIO_MODER_MODER2|
+					  GPIO_MODER_MODER3);
 
 	GPIOA->PUPDR |= (GPIO_PUPDR_PUPDR1_0|
-					 GPIO_PUPDR_PUPDR2_0);
+					 GPIO_PUPDR_PUPDR2_0|
+					 GPIO_PUPDR_PUPDR3_0);
 
 }
 
+void init_external_interrupts(void){
+
+	RCC -> APB2ENR |= RCC_APB2ENR_SYSCFGCOMPEN; 	//enable clock
+	SYSCFG -> EXTICR[0] |= SYSCFG_EXTICR1_EXTI3_PA; //PA3 to EXTI1 register
+	EXTI -> IMR |= EXTI_IMR_MR3;  					//unmask interrupt
+	EXTI -> FTSR |= EXTI_FTSR_TR3;					//falling edge trigger
+	NVIC_EnableIRQ(EXTI2_3_IRQn);					//NVIC handler
+
+}
+
+void EXTI2_3_IRQHandler(void){
+	interrupt_count++;	//increments the interrupt count 
+	delay(40000);		//needed to overcome switch bounce. makes program very stable
+	if((interrupt_count%2)!=0){
+		display_on_LCD(0);	//when system is in 'on' state, it displays a 0
+	}
+	EXTI -> PR |= EXTI_PR_PR3; //resets interrupt
+	}
